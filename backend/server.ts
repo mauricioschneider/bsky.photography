@@ -15,6 +15,20 @@ const port = 3001;
 
 app.use(cors());
 
+// Cache for storing the photos
+interface Cache {
+  data: any;
+  timestamp: number;
+}
+
+let photosCache: Cache = {
+  data: null,
+  timestamp: 0,
+};
+
+// Cache duration in milliseconds (2 seconds)
+const CACHE_DURATION = 2 * 1000;
+
 // Types
 interface PhotoPost {
   id: string;
@@ -80,37 +94,85 @@ const getPostId = (uri: string): string => {
   return parts[parts.length - 1];
 };
 
-// Routes
+const fetchPhotosFromApi = async (): Promise<PhotoPost[]> => {
+  const searchResponse = await agent.app.bsky.feed.searchPosts({
+    q: "photography",
+    //author: "did:plc:dgfozpqiulvymjgun4quydgv",
+    limit: 100,
+  });
+
+  const photoPosts: PhotoPost[] = searchResponse.data.posts
+    .filter(hasValidImageEmbed)
+    .filter(hasNoLabels)
+    .map((post) => ({
+      id: post.uri,
+      text: getPostText(post),
+      author: {
+        handle: post.author.handle,
+        displayName: post.author.displayName || post.author.handle,
+        profileUrl: `https://bsky.app/profile/${post.author.handle}`,
+      },
+      postUrl: `https://bsky.app/profile/${post.author.handle}/post/${getPostId(post.uri)}`,
+      imageUrl: getImageUrl(post.embed as AppBskyEmbedImages.View)!,
+      fullImageUrl: (post.embed as AppBskyEmbedImages.View).images[0].fullsize,
+      createdAt: post.indexedAt,
+      labels: post.labels,
+    }));
+
+  return photoPosts;
+};
+
+// Function to refresh cache
+const refreshCache = async () => {
+  try {
+    console.log(`[${formatTime()}] Refreshing cache...`);
+    const photos = await fetchPhotosFromApi();
+    photosCache = {
+      data: photos,
+      timestamp: Date.now(),
+    };
+    console.log(
+      `[${formatTime()}] Cache refreshed successfully with ${photos.length} photos`
+    );
+  } catch (error) {
+    console.error(`[${formatTime()}] Error refreshing cache:`, error);
+  }
+};
+
+// Format timestamp for logging
+const formatTime = () => {
+  return new Date().toLocaleTimeString();
+};
+
+setInterval(refreshCache, CACHE_DURATION);
+
+// Initial cache population
+refreshCache().then(() => {
+  console.log(`[${formatTime()}] Initial cache population completed`);
+});
+
 app.get("/api/photos", async (_req: Request, res: Response): Promise<void> => {
   try {
-    const searchResponse = await agent.app.bsky.feed.searchPosts({
-      q: "photography",
-      //author: "did:plc:dgfozpqiulvymjgun4quydgv",
-      limit: 50,
-    });
+    // Always serve from cache if available
+    if (photosCache.data) {
+      console.log(
+        `[${formatTime()}] Serving ${photosCache.data.length} photos from cache`
+      );
+      res.json(photosCache.data);
+      return;
+    }
 
-    const photoPosts: PhotoPost[] = searchResponse.data.posts
-      .filter(hasValidImageEmbed)
-      .filter(hasNoLabels)
-      .map((post) => ({
-        id: post.uri,
-        text: getPostText(post),
-        author: {
-          handle: post.author.handle,
-          displayName: post.author.displayName || post.author.handle,
-          profileUrl: `https://bsky.app/profile/${post.author.handle}`,
-        },
-        postUrl: `https://bsky.app/profile/${post.author.handle}/post/${getPostId(post.uri)}`,
-        imageUrl: getImageUrl(post.embed as AppBskyEmbedImages.View)!,
-        fullImageUrl: (post.embed as AppBskyEmbedImages.View).images[0]
-          .fullsize,
-        createdAt: post.indexedAt,
-        labels: post.labels,
-      }));
+    // If cache is empty (first request), fetch data
+    console.log(`[${formatTime()}] Cache empty, fetching fresh data`);
+    const photos = await fetchPhotosFromApi();
+    photosCache = {
+      data: photos,
+      timestamp: Date.now(),
+    };
 
-    res.json(photoPosts);
+    res.json(photos);
   } catch (error) {
-    console.error("Error fetching photos:", error);
+    console.error(`[${formatTime()}] Error handling request:`, error);
     res.status(500).json({ error: "Failed to fetch photos" });
   }
 });
