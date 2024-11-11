@@ -1,39 +1,36 @@
-# syntax = docker/dockerfile:1
+# Build stage for frontend
+FROM node:18 AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=20.18.0
-FROM node:${NODE_VERSION}-slim as base
+# Build stage for backend
+FROM node:18 AS backend-builder
+WORKDIR /app/backend
+COPY backend/package*.json ./
+RUN npm install
+COPY backend/ ./
+RUN npm run build
 
-LABEL fly_launch_runtime="Node.js"
-
-# Node.js app lives here
+# Production stage
+FROM node:18-slim
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
+# Copy backend build and dependencies
+COPY --from=backend-builder /app/backend/dist ./dist
+COPY --from=backend-builder /app/backend/package*.json ./
+RUN npm install --production
 
+# Copy frontend build to serve statically
+COPY --from=frontend-builder /app/frontend/build ./public
 
-# Throw-away build stage to reduce size of final image
-FROM base as build
+# Install serve for frontend
+RUN npm install serve
 
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
+# Expose the port
+EXPOSE 8080
 
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci
-
-# Copy application code
-COPY . .
-
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD [ "node", "index.js" ]
+# Start the application
+CMD ["npm", "start"]

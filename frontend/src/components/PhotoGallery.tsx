@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, ExternalLink, Sun, Moon, ChevronLeft, ChevronRight } from 'lucide-react';
+import config from '../config';
 
 interface Author {
   handle: string;
@@ -31,7 +32,7 @@ const PhotoGallery: React.FC = () => {
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/photos');
+        const response = await fetch(`${config.apiUrl}/api/photos`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
