@@ -7,17 +7,18 @@ app = 'bluesky-photography'
 primary_region = 'sea'
 
 [build]
+  dockerfile = "Dockerfile"
 
 [env]
-  port=8080
+  PORT = "8080"
 
 [http_service]
-  internal_port = 3001
+  internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = true
   auto_start_machines = true
-  min_machines_running = 0
-  processes = ['app']
+  min_machines_running = 1
+  processes = ["app"]
 
 [[http_service.checks]]
   interval = "10s"
@@ -27,7 +28,11 @@ primary_region = 'sea'
   path = "/api/photos"
   protocol = "http"
 
-[[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
+[mounts]
+  source = "data"
+  destination = "/data"
+
+# Static asset configuration
+[static]
+  guest_path = "/app/public"
+  url_prefix = "/"
