@@ -5,6 +5,7 @@ import {
   AppBskyFeedDefs,
   AppBskyEmbedImages,
   AppBskyFeedPost,
+  Label,
 } from "@atproto/api";
 
 const agent = new AtpAgent({ service: "https://public.api.bsky.app" });
@@ -26,6 +27,7 @@ interface PhotoPost {
   imageUrl: string;
   fullImageUrl: string;
   createdAt: string;
+  labels: Label[] | undefined;
 }
 
 // TODO: Update type guard to use https://github.com/bluesky-social/atproto/tree/main/packages/api#validation-and-types
@@ -64,16 +66,32 @@ const hasValidImageEmbed = (post: AppBskyFeedDefs.PostView): boolean => {
   return isImageEmbed(post.embed) && post.embed.images.length > 0;
 };
 
+const hasNoLabels = (post: AppBskyFeedDefs.PostView): boolean => {
+  if (post.labels && post.labels.length > 0) {
+    return false;
+  }
+
+  return true;
+};
+
+// Extract post ID from URI (after "app.bsky.feed.post/")
+const getPostId = (uri: string): string => {
+  const parts = uri.split("/");
+  return parts[parts.length - 1];
+};
+
 // Routes
 app.get("/api/photos", async (_req: Request, res: Response): Promise<void> => {
   try {
     const searchResponse = await agent.app.bsky.feed.searchPosts({
       q: "photography",
-      limit: 30,
+      //author: "did:plc:dgfozpqiulvymjgun4quydgv",
+      limit: 50,
     });
 
     const photoPosts: PhotoPost[] = searchResponse.data.posts
       .filter(hasValidImageEmbed)
+      .filter(hasNoLabels)
       .map((post) => ({
         id: post.uri,
         text: getPostText(post),
@@ -82,10 +100,12 @@ app.get("/api/photos", async (_req: Request, res: Response): Promise<void> => {
           displayName: post.author.displayName || post.author.handle,
           profileUrl: `https://bsky.app/profile/${post.author.handle}`,
         },
+        postUrl: `https://bsky.app/profile/${post.author.handle}/post/${getPostId(post.uri)}`,
         imageUrl: getImageUrl(post.embed as AppBskyEmbedImages.View)!,
         fullImageUrl: (post.embed as AppBskyEmbedImages.View).images[0]
           .fullsize,
         createdAt: post.indexedAt,
+        labels: post.labels,
       }));
 
     res.json(photoPosts);
