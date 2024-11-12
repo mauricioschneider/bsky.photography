@@ -28,11 +28,11 @@ primary_region = 'sea'
   path = "/api/photos"
   protocol = "http"
 
-[mounts]
-  source = "data"
-  destination = "/data"
-
 # Static asset configuration
 [static]
   guest_path = "/app/public"
   url_prefix = "/"
+
+[[static.rules]]
+  match = "/api/*"
+  pass = true
