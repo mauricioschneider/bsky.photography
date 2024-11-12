@@ -22,7 +22,7 @@ COPY --from=backend-builder /app/backend/package*.json ./
 RUN npm install --omit=dev
 
 # Copy frontend build to public directory for static serving
-COPY --from=frontend-builder /app/frontend/build/ ./public/
+COPY --from=frontend-builder /app/frontend/dist ./public/
 
 EXPOSE 8080
 CMD ["node", "dist/server.js"]
