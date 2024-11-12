@@ -15,14 +15,26 @@ COPY backend/ ./
 RUN npm run build
 
 # Production stage
-FROM node:18-slim
+FROM nginx:alpine
 WORKDIR /app
+
+# Install Node.js in the final image
+RUN apk add --update nodejs npm
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy frontend build to nginx serve directory
+COPY --from=frontend-builder /app/frontend/build /usr/share/nginx/html
+
+# Copy backend build and dependencies
 COPY --from=backend-builder /app/backend/dist ./dist
 COPY --from=backend-builder /app/backend/package*.json ./
 RUN npm install --omit=dev
 
-# Copy frontend build to public directory for static serving
-COPY --from=frontend-builder /app/frontend/dist ./public/
+# Copy start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-EXPOSE 8080
-CMD ["node", "dist/server.js"]
+EXPOSE 80
+CMD ["/start.sh"]

@@ -11,7 +11,7 @@ import {
 const agent = new AtpAgent({ service: "https://public.api.bsky.app" });
 
 const app = express();
-const port = process.env.API_PORT || 8080;
+const port = process.env.API_PORT || 3001;
 
 app.use(cors());
 

@@ -9,11 +9,8 @@ primary_region = 'sea'
 [build]
   dockerfile = "Dockerfile"
 
-[env]
-  PORT = "8080"
-
 [http_service]
-  internal_port = 8080
+  internal_port = 80
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
@@ -27,12 +24,3 @@ primary_region = 'sea'
   method = "GET"
   path = "/api/photos"
   protocol = "http"
-
-# Static asset configuration
-[static]
-  guest_path = "/app/public"
-  url_prefix = "/"
-
-[[static.rules]]
-  match = "/api/*"
-  pass = true
