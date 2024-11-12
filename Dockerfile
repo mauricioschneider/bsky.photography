@@ -25,7 +25,7 @@ RUN apk add --update nodejs npm
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy frontend build to nginx serve directory
-COPY --from=frontend-builder /app/frontend/build /usr/share/nginx/html
+COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # Copy backend build and dependencies
 COPY --from=backend-builder /app/backend/dist ./dist
