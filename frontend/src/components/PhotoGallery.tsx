@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  X,
-  ExternalLink,
-  Sun,
-  Moon,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { X, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import config from "../config";
 
 interface Author {

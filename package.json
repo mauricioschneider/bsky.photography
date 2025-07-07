@@ -23,7 +23,7 @@
   "author": "Mauricio Schneider <mauricio@schneider.xyz>",
   "license": "MIT",
   "dependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.2.0"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.5.9"

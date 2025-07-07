@@ -8,7 +8,7 @@ import {
   Label,
 } from "@atproto/api";
 
-const agent = new AtpAgent({ service: "https://public.api.bsky.app" });
+const agent = new AtpAgent({ service: "https://bsky.social" });
 
 const app = express();
 const port = process.env.API_PORT || 3001;
@@ -26,8 +26,8 @@ let photosCache: Cache = {
   timestamp: 0,
 };
 
-// Cache duration in milliseconds (2 seconds)
-const CACHE_DURATION = 2 * 1000;
+// Cache duration in milliseconds
+const CACHE_DURATION = 5 * 1000;
 
 // Types
 interface PhotoPost {
@@ -144,13 +144,6 @@ const formatTime = () => {
   return new Date().toLocaleTimeString();
 };
 
-setInterval(refreshCache, CACHE_DURATION);
-
-// Initial cache population
-refreshCache().then(() => {
-  console.log(`[${formatTime()}] Initial cache population completed`);
-});
-
 app.get("/api/photos", async (_req: Request, res: Response): Promise<void> => {
   try {
     // Always serve from cache if available
@@ -177,8 +170,34 @@ app.get("/api/photos", async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`[${formatTime()}] Server running on port ${port}`);
-});
+const startApp = async () => {
+  try {
+    // 1. Authenticate with the Bluesky API
+    console.log(`[${formatTime()}] Authenticating...`);
+    await agent.login({
+      identifier: process.env.BSKY_USERNAME || "",
+      password: process.env.BSKY_PASSWORD || "",
+    });
+    console.log(`[${formatTime()}] Authentication successful.`);
+
+    // 2. Initial cache population
+    refreshCache().then(() => {
+      console.log(`[${formatTime()}] Initial cache population completed`);
+    });
+
+    // 3. Set up the recurring cache refresh to run in the background
+    setInterval(refreshCache, CACHE_DURATION);
+
+    // 4. Start the Express server to listen for requests
+    app.listen(port, () => {
+      console.log(`[${formatTime()}] Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error(`[${formatTime()}] Failed to start the application:`, error);
+    process.exit(1); // Exit the process if startup fails
+  }
+};
+
+startApp();
 
 export default app;
