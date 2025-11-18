@@ -1,0 +1,44 @@
+name: Deploy to Render
+
+on:
+  # Triggers the workflow on push events to the 'main' branch
+  push:
+    branches:
+      - main
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  # The deployment job
+  deploy:
+    # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+    
+    # Permissions are needed to create the GitHub deployment status (the check mark/X next to commits)
+    permissions:
+      deployments: write
+      contents: read # Needed for checkout
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Deploy to Render
+      - name: Deploy Service to Render
+        uses: JorgeLNJunior/render-deploy@v1.4.6
+        with:
+          # Required: Your Render Service ID
+          service_id: ${{ secrets.RENDER_SERVICE_ID }}
+          # Required: Your Render API Key
+          api_key: ${{ secrets.RENDER_API_KEY }}
+          # Optional: Clear Render's build cache before deploying
+          clear_cache: true
+          # Wait for the deployment to finish before the job completes
+          wait_deploy: true
+          # Use GitHub's built-in deployment environment features
+          github_deployment: true
+          # Set the environment name for GitHub status checks
+          deployment_environment: 'production'
+          # Use the default GitHub token for setting deployment status
+          github_token: ${{ secrets.GITHUB_TOKEN }}
